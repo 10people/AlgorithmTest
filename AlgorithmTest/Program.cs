@@ -9,22 +9,471 @@ namespace AlgorithmTest
         static void Main(string[] args)
         {
             new Sort().TestSort();
+            TestBSTree();
+            TestRBBSTree();
         }
 
-        void TestBiTree()
+        static void TestBSTree()
         {
-            List<int> TreeDatas = new List<int>() { 553, 663, 221, 243, 452, 334, 245, 975, 572, 558 };
+            BSTNode tree = new BSTNode(50);
+            var random = new Random();
 
-            BiTree temp = new BiTree(TreeDatas[0]);
+            Stopwatch watch = new Stopwatch();
+            watch.Restart();
 
-            for (int i = 1; i < TreeDatas.Count; i++)
+            var find = new BSTNode(random.Next(0, 100));
+            tree = BSTNode.Add(tree, find);
+            for (int i = 0; i < 10000; i++)
             {
-                temp.InsertNodeAsSorted(TreeDatas[i]);
+                tree = BSTNode.Add(tree, new BSTNode(random.Next(0, 100000)));
             }
 
-            temp.PreOrderTraverse();
+            Console.WriteLine("BST: " + watch.ElapsedMilliseconds);
+
+            //for (int i = 0; i < 10; i++)
+            //{
+            //    tree = tree.Delete(new BSTNode(random.Next(0, 100)));
+            //}
+
+            //tree.MidOrderIterate();
+
+            watch.Restart();
+
+            Console.WriteLine("Find: " + find.Key + " in BST");
+            var result = tree.Get(find);
+            Console.WriteLine("Find: " + result.Key + " in: " + watch.ElapsedTicks);
+        }
+
+        static void TestRBBSTree()
+        {
+            RBBSTNode tree = new RBBSTNode(50);
+            var random = new Random();
+
+            Stopwatch watch = new Stopwatch();
+            watch.Restart();
+
+            var find = new RBBSTNode(random.Next(0, 100));
+            tree = RBBSTNode.Add(tree, find);
+            for (int i = 0; i < 10000; i++)
+            {
+                tree = RBBSTNode.Add(tree, new RBBSTNode(random.Next(0, 100000)));
+            }
+
+            Console.WriteLine("RBBST: " + watch.ElapsedMilliseconds);
+
+            //for (int i = 0; i < 10; i++)
+            //{
+            //    tree = tree.Delete(new RBBSTNode(random.Next(0, 100)));
+            //}
+
+            //tree.MidOrderIterate();
+
+            watch.Restart();
+
+            Console.WriteLine("Find: " + find.Key + " in RBBST");
+            var result = tree.Get(find);
+            Console.WriteLine("Find: " + result.Key + " in: " + watch.ElapsedTicks);
         }
     }
+
+    public class RBBSTNode : BSTNode
+    {
+        public bool IsRed;
+        public RBBSTNode Left { get { return (RBBSTNode)base.Left; } set { base.Left = value; } }
+        public RBBSTNode Right { get { return (RBBSTNode)base.Right; } set { base.Right = value; } }
+
+        public static bool GetIsRed(RBBSTNode p_node)
+        {
+            return p_node != null && p_node.IsRed;
+        }
+
+        public RBBSTNode(int p_key) : base(p_key)
+        {
+            IsRed = true;
+        }
+
+        public RBBSTNode Get(RBBSTNode p_node)
+        {
+            return (RBBSTNode)base.Get(p_node);
+        }
+
+        public static RBBSTNode LeftRotate(RBBSTNode source)
+        {
+            var other = source.Right;
+            source.Right = other.Left;
+            other.Left = source;
+
+            other.IsRed = source.IsRed;
+            source.IsRed = true;
+
+            other.Size = source.Size;
+            source.Size = 1 + SizeOf(source.Left) + SizeOf(source.Right);
+
+            return other;
+        }
+
+        public static RBBSTNode RightRotate(RBBSTNode source)
+        {
+            var other = source.Left;
+            source.Left = other.Right;
+            other.Right = source;
+
+            other.IsRed = source.IsRed;
+            source.IsRed = true;
+
+            other.Size = source.Size;
+            source.Size = 1 + SizeOf(source.Left) + SizeOf(source.Right);
+
+            return other;
+        }
+
+        public static void FlipColor(RBBSTNode source)
+        {
+            source.Left.IsRed = false;
+            source.Right.IsRed = false;
+            source.IsRed = true;
+        }
+
+        public static RBBSTNode Add(RBBSTNode source, RBBSTNode add)
+        {
+            if (source == null)
+            {
+                source = add;
+                return source;
+            }
+
+            if (add > source)
+            {
+                source.Right = Add(source.Right, add);
+            }
+            else if (add < source)
+            {
+                source.Left = Add(source.Left, add);
+            }
+            else
+            {
+                //to implement change contents.
+            }
+
+            if (GetIsRed(source.Right) && !GetIsRed(source.Left))
+            {
+                source = LeftRotate(source);
+            }
+
+            if (GetIsRed(source.Left) && GetIsRed(source.Left.Left))
+            {
+                source = RightRotate(source);
+            }
+
+            if (GetIsRed(source.Left) && GetIsRed(source.Right))
+            {
+                FlipColor(source);
+            }
+
+            source.Size = 1 + SizeOf(source.Left) + SizeOf(source.Right);
+
+            return source;
+        }
+
+        public RBBSTNode Delete(RBBSTNode p_node)
+        {
+            return (RBBSTNode)base.Delete(p_node);
+        }
+    }
+
+    public class BSTNode : IComparable<BSTNode>
+    {
+        public int Key;
+        public virtual BSTNode Left { get; set; }
+        public virtual BSTNode Right { get; set; }
+        public int Size;
+
+        public static int SizeOf(BSTNode p_node)
+        {
+            return p_node == null ? 0 : p_node.Size;
+        }
+
+        public BSTNode(int p_key)
+        {
+            Key = p_key;
+            Left = null;
+            Right = null;
+            Size = 1;
+        }
+
+        public static void MidOrderIterate(BSTNode source)
+        {
+            if (source != null)
+            {
+                source.MidOrderIterate();
+            }
+        }
+
+        public void MidOrderIterate()
+        {
+            MidOrderIterate(Left);
+            Console.Write(Key + " ");
+            MidOrderIterate(Right);
+        }
+
+        public static BSTNode Get(BSTNode source, BSTNode find)
+        {
+            return source == null ? null : source.Get(find);
+        }
+
+        public BSTNode Get(BSTNode p_node)
+        {
+            if (p_node > this)
+            {
+                return Get(Right, p_node);
+            }
+            else if (p_node < this)
+            {
+                return Get(Left, p_node);
+            }
+            else
+            {
+                return this;
+            }
+        }
+
+        public static BSTNode Add(BSTNode source, BSTNode add)
+        {
+            if (source == null)
+            {
+                source = add;
+                return source;
+            }
+            else
+            {
+                return source.Add(add);
+            }
+        }
+
+        private BSTNode Add(BSTNode p_node)
+        {
+            if (p_node > this)
+            {
+                if (Right == null)
+                {
+                    Right = p_node;
+                }
+                else
+                {
+                    Right = Right.Add(p_node);
+                }
+
+                Size = 1 + SizeOf(Left) + SizeOf(Right);
+            }
+            else if (p_node < this)
+            {
+                if (Left == null)
+                {
+                    Left = p_node;
+                }
+                else
+                {
+                    Left = Left.Add(p_node);
+                }
+
+                Size = 1 + SizeOf(Left) + SizeOf(Right);
+            }
+            else
+            {
+                //to implement change contents.
+            }
+
+            return this;
+        }
+
+        public static BSTNode Delete(BSTNode source, BSTNode del)
+        {
+            return source == null ? null : source.Delete(del);
+        }
+
+        public BSTNode Delete(BSTNode p_node)
+        {
+            if (p_node > this)
+            {
+                Right = Delete(Right, p_node);
+                return this;
+            }
+            else if (p_node < this)
+            {
+                Left = Delete(Left, p_node);
+                return this;
+            }
+            else
+            {
+                if (Left == null)
+                {
+                    return Right;
+                }
+                else if (Right == null)
+                {
+                    return Left;
+                }
+                else
+                {
+                    var min = Right.Min();
+                    Right = Right.Delete(min);
+
+                    min.Left = Left;
+                    min.Right = Right;
+
+                    return min;
+                }
+            }
+        }
+
+        public BSTNode Min()
+        {
+            return Left != null ? Left.Min() : this;
+        }
+
+        public BSTNode Max()
+        {
+            return Right != null ? Right.Max() : this;
+        }
+
+        public static BSTNode Floor(BSTNode source, BSTNode find)
+        {
+            return source == null ? null : source.Floor(find);
+        }
+
+        public BSTNode Floor(BSTNode p_node)
+        {
+            if (p_node.Equals(this))
+            {
+                return this;
+            }
+
+            if (p_node < this)
+            {
+                return Floor(Left, p_node);
+            }
+            else
+            {
+                if (Right == null)
+                {
+                    return this;
+                }
+                else
+                {
+                    var floor = Right.Floor(p_node);
+                    if (floor == null)
+                    {
+                        return this;
+                    }
+                    else
+                    {
+                        return floor;
+                    }
+                }
+            }
+        }
+
+        public static BSTNode Ceiling(BSTNode source, BSTNode find)
+        {
+            return source == null ? null : source.Ceiling(find);
+        }
+
+        public BSTNode Ceiling(BSTNode p_node)
+        {
+            if (p_node.Equals(this))
+            {
+                return this;
+            }
+
+            if (p_node > this)
+            {
+                return Ceiling(Right, p_node);
+            }
+            else
+            {
+                if (Left == null)
+                {
+                    return this;
+                }
+                else
+                {
+                    var ceiling = Left.Ceiling(p_node);
+                    if (ceiling == null)
+                    {
+                        return this;
+                    }
+                    else
+                    {
+                        return ceiling;
+                    }
+                }
+            }
+        }
+
+        public static bool operator >(BSTNode first, BSTNode second)
+        {
+            return first.CompareTo(second) > 0;
+        }
+
+        public static bool operator <(BSTNode first, BSTNode second)
+        {
+            return first.CompareTo(second) < 0;
+        }
+
+        public bool Equals(BSTNode other)
+        {
+            return this.CompareTo(other) == 0;
+        }
+
+        public int CompareTo(BSTNode other)
+        {
+            return Key.CompareTo(other.Key);
+        }
+    }
+
+    //public class BST
+    //{
+    //    private BTNode root;
+
+    //    public int Size
+    //    {
+    //        get
+    //        {
+    //            if (root == null)
+    //            {
+    //                return 0;
+    //            }
+    //            else
+    //            {
+    //                return root.Size;
+    //            }
+    //        }
+    //    }
+
+    //    public BTNode Get(BTNode p_node)
+    //    {
+    //        if (root == null)
+    //        {
+    //            return null;
+    //        }
+    //        else
+    //        {
+    //            return root.Get(p_node);
+    //        }
+    //    }
+
+    //    public void Add(BTNode p_node)
+    //    {
+    //        if (root == null)
+    //        {
+    //            root = p_node;
+    //        }
+    //        else
+    //        {
+    //            root.Add(p_node);
+    //        }
+    //    }
+    //}
 
     public class Sort
     {
@@ -262,104 +711,6 @@ namespace AlgorithmTest
             }
 
             return true;
-        }
-    }
-
-    public class BiTree
-    {
-        public BiTreeNode RootNode;
-
-        public int Depth { get; private set; }
-
-        public BiTree(int p_data)
-        {
-            RootNode = new BiTreeNode(p_data, 1);
-
-            Depth = 1;
-        }
-
-        public void PreOrderTraverse()
-        {
-            PreOrderTraverse(RootNode);
-        }
-
-        private void PreOrderTraverse(BiTreeNode p_parentNode)
-        {
-            if (p_parentNode == null)
-            {
-                return;
-            }
-
-            Console.Write(p_parentNode.Data + "," + p_parentNode.Level + "    ");
-
-            PreOrderTraverse(p_parentNode.LeftChild);
-            PreOrderTraverse(p_parentNode.RightChild);
-        }
-
-        public void InsertNodeAsSorted(int p_data)
-        {
-            BiTreeNode InsertParentNode = RootNode;
-
-            while (true)
-            {
-                while (p_data <= InsertParentNode.Data && InsertParentNode.LeftChild != null)
-                {
-                    InsertParentNode = InsertParentNode.LeftChild;
-                }
-
-                if (p_data <= InsertParentNode.Data && InsertParentNode.LeftChild == null)
-                {
-                    InsertParentNode.LeftChild = new BiTreeNode(p_data, InsertParentNode.Level + 1);
-                    UpdateDepthWithNewNode(InsertParentNode.LeftChild);
-                    break;
-                }
-
-                while (p_data > InsertParentNode.Data && InsertParentNode.RightChild != null)
-                {
-                    InsertParentNode = InsertParentNode.RightChild;
-                }
-
-                if (p_data > InsertParentNode.Data && InsertParentNode.RightChild == null)
-                {
-                    InsertParentNode.RightChild = new BiTreeNode(p_data, InsertParentNode.Level + 1);
-                    UpdateDepthWithNewNode(InsertParentNode.RightChild);
-                    break;
-                }
-            }
-        }
-
-        private void UpdateDepthWithNewNode(BiTreeNode p_newOne)
-        {
-            if (p_newOne.Level > Depth)
-            {
-                Depth = p_newOne.Level;
-            }
-        }
-    }
-
-    public class BiTreeNode
-    {
-        public int Data;
-        public int Level;
-        public BiTreeNode LeftChild;
-        public BiTreeNode RightChild;
-
-        public BiTreeNode(int p_data)
-        {
-            Data = p_data;
-        }
-
-        public BiTreeNode(int p_data, int p_level)
-        {
-            Data = p_data;
-            Level = p_level;
-        }
-
-        public BiTreeNode(int p_data, BiTreeNode p_lc, BiTreeNode p_rc)
-        {
-            Data = p_data;
-            LeftChild = p_lc;
-            RightChild = p_rc;
         }
     }
 }
