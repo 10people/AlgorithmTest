@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace AlgorithmTest
 {
@@ -13,6 +14,46 @@ namespace AlgorithmTest
             TestRBBSTree();
             TestSCHash();
             TestLPHash();
+            TestGraph();
+        }
+
+        static void TestGraph()
+        {
+            Graph graph = new Graph();
+            var random = new Random();
+
+            Stopwatch watch = new Stopwatch();
+            watch.Restart();
+
+            graph.AddEdge(0, 1);
+            int toAdd;
+            int toAdd2;
+            for (int i = 2; i < 10000; i++)
+            {
+                toAdd = i;
+                toAdd2 = random.Next(0, i);
+                graph.AddEdge(toAdd, toAdd2);
+            }
+
+            Console.WriteLine("Graph: " + watch.ElapsedMilliseconds);
+
+            Console.WriteLine("DFP in Graph");
+            watch.Restart();
+
+            DepthFirstPath dfp = new DepthFirstPath(graph);
+            dfp.DFP(0);
+            Console.WriteLine("DFP in: " + watch.ElapsedTicks);
+            //dfp.OutputOrder();
+            dfp.OutputPath(5000);
+
+            Console.WriteLine("BFP in Graph");
+            watch.Restart();
+
+            BreadthFirstPath bfp = new BreadthFirstPath(graph);
+            bfp.BFP(0);
+            Console.WriteLine("BFP in: " + watch.ElapsedTicks);
+            //bfp.OutputOrder();
+            bfp.OutputPath(5000);
         }
 
         static void TestLPHash()
@@ -131,6 +172,256 @@ namespace AlgorithmTest
 
             var result = tree.Get(find);
             Console.WriteLine("Find: " + result.Key + " in: " + watch.ElapsedTicks);
+        }
+    }
+
+    public class BreadthFirstPath
+    {
+        public bool[] connected;
+        public bool[] addedToQueue;
+        public List<int> searchOrder = new List<int>();
+        public Graph graph;
+
+        public int[] SearchFrom;
+
+        public bool IsConnected(int p_targetVertex)
+        {
+            return p_targetVertex < connected.Length && connected[p_targetVertex];
+        }
+
+        public void OutputPath(int p_targetVertex)
+        {
+            if (IsConnected(p_targetVertex))
+            {
+                Stack<int> path = new Stack<int>();
+                var current = p_targetVertex;
+
+                do
+                {
+                    path.Push(current);
+                    current = SearchFrom[current];
+                }
+                while (current >= 0);
+
+                Console.WriteLine(path.Select(item => item.ToString()).Aggregate((i, j) => i + "," + j));
+            }
+        }
+
+        public BreadthFirstPath(Graph p_graph)
+        {
+            connected = new bool[p_graph.VertexCount];
+            addedToQueue = new bool[p_graph.VertexCount];
+            SearchFrom = new int[p_graph.VertexCount];
+            graph = p_graph;
+        }
+
+        public void BFP(int p_startVertex)
+        {
+            SearchFrom[p_startVertex] = -1;
+            process(graph, p_startVertex);
+        }
+
+        private void process(Graph p_graph, int p_startVertex)
+        {
+            Queue<int> processQueue = new Queue<int>();
+            processQueue.Enqueue(p_startVertex);
+            addedToQueue[p_startVertex] = true;
+
+            while (processQueue.Count > 0)
+            {
+                var dequeue = processQueue.Dequeue();
+
+                connected[dequeue] = true;
+                searchOrder.Add(dequeue);
+
+                for (int i = 0; i < p_graph.AdjArray[dequeue].Count; i++)
+                {
+                    if (!addedToQueue[p_graph.AdjArray[dequeue][i]])
+                    {
+                        SearchFrom[p_graph.AdjArray[dequeue][i]] = dequeue;
+                        addedToQueue[p_graph.AdjArray[dequeue][i]] = true;
+                        processQueue.Enqueue(p_graph.AdjArray[dequeue][i]);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// May cause serious memory problem if vertex count large.
+        /// </summary>
+        public void OutputOrder()
+        {
+            Console.WriteLine(searchOrder.Select(item => item.ToString()).Aggregate((i, j) => i + "," + j));
+        }
+    }
+
+    public class DepthFirstPath : DepthFirstSearch
+    {
+        public int[] SearchFrom;
+
+        public bool IsConnected(int p_targetVertex)
+        {
+            return p_targetVertex < connected.Length && connected[p_targetVertex];
+        }
+
+        public void OutputPath(int p_targetVertex)
+        {
+            if (IsConnected(p_targetVertex))
+            {
+                Stack<int> path = new Stack<int>();
+                var current = p_targetVertex;
+
+                do
+                {
+                    path.Push(current);
+                    current = SearchFrom[current];
+                }
+                while (current >= 0);
+
+                Console.WriteLine(path.Select(item => item.ToString()).Aggregate((i, j) => i + "," + j));
+            }
+        }
+
+        public DepthFirstPath(Graph p_graph) : base(p_graph)
+        {
+            SearchFrom = new int[p_graph.VertexCount];
+        }
+
+        public void DFP(int p_startVertex)
+        {
+            SearchFrom[p_startVertex] = -1;
+            DFS(p_startVertex);
+        }
+
+        protected override void process(Graph p_graph, int p_startVertex)
+        {
+            connected[p_startVertex] = true;
+            searchOrder.Add(p_startVertex);
+
+            for (int i = 0; i < p_graph.AdjArray[p_startVertex].Count; i++)
+            {
+                if (!connected[p_graph.AdjArray[p_startVertex][i]])
+                {
+                    SearchFrom[p_graph.AdjArray[p_startVertex][i]] = p_startVertex;
+                    process(p_graph, p_graph.AdjArray[p_startVertex][i]);
+                }
+            }
+        }
+    }
+
+    public class DepthFirstSearch
+    {
+        public bool[] connected;
+        public List<int> searchOrder = new List<int>();
+        public Graph graph;
+
+        public DepthFirstSearch(Graph p_graph)
+        {
+            connected = new bool[p_graph.VertexCount];
+            graph = p_graph;
+        }
+
+        public void DFS(int p_startVertex)
+        {
+            process(graph, p_startVertex);
+        }
+
+        protected virtual void process(Graph p_graph, int p_startVertex)
+        {
+            if (connected[p_startVertex])
+            {
+                return;
+            }
+
+            connected[p_startVertex] = true;
+            searchOrder.Add(p_startVertex);
+
+            for (int i = 0; i < p_graph.AdjArray[p_startVertex].Count; i++)
+            {
+                process(p_graph, p_graph.AdjArray[p_startVertex][i]);
+            }
+        }
+
+        /// <summary>
+        /// May cause serious memory problem if vertex count large.
+        /// </summary>
+        public void OutputOrder()
+        {
+            Console.WriteLine(searchOrder.Select(item => item.ToString()).Aggregate((i, j) => i + "," + j));
+        }
+    }
+
+    /// <summary>
+    /// Adj list repersentation, no duplicate edge, no self loop edge.
+    /// </summary>
+    public class Graph
+    {
+        public int VertexCount;
+        public int EdgeCount;
+        public List<int>[] AdjArray;
+
+        private int size;
+
+        public Graph()
+        {
+            size = 16;
+            AllocateArray();
+        }
+
+        public Graph(int p_count)
+        {
+            size = p_count;
+            AllocateArray();
+        }
+
+        private void AllocateArray()
+        {
+            AdjArray = new List<int>[size];
+        }
+
+        private void Resize()
+        {
+            size *= 2;
+            var temp = new List<int>[size];
+            AdjArray.CopyTo(temp, 0);
+
+            AdjArray = temp;
+        }
+
+        public void AddEdge(int p_first, int p_second)
+        {
+            if (p_first == p_second)
+            {
+                return;
+            }
+
+            while (size <= p_first || size <= p_second)
+            {
+                Resize();
+            }
+
+            AddAdj(p_first, p_second);
+            AddAdj(p_second, p_first);
+        }
+
+        private void AddAdj(int p_first, int p_second)
+        {
+            if (p_first >= AdjArray.Length)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+
+            if (AdjArray[p_first] == null)
+            {
+                AdjArray[p_first] = new List<int>();
+                VertexCount++;
+            }
+
+            if (!AdjArray[p_first].Contains(p_second))
+            {
+                AdjArray[p_first].Add(p_second);
+                EdgeCount++;
+            }
         }
     }
 
