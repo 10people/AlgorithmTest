@@ -11,6 +11,64 @@ namespace AlgorithmTest
             new Sort().TestSort();
             TestBSTree();
             TestRBBSTree();
+            TestSCHash();
+            TestLPHash();
+        }
+
+        static void TestLPHash()
+        {
+            LPHash<int, int> hash = new LPHash<int, int>();
+            var random = new Random();
+
+            Stopwatch watch = new Stopwatch();
+            watch.Restart();
+
+            var find = random.Next(0, 10000);
+            hash.Add(find, find);
+            int toAdd;
+            for (int i = 0; i < 10000; i++)
+            {
+                toAdd = random.Next(0, 10000);
+                hash.Add(toAdd, toAdd);
+            }
+
+            Console.WriteLine("LPHash: " + watch.ElapsedMilliseconds);
+
+            Console.WriteLine("Find: " + 5000 + " in LPHash");
+            int result = 0;
+            bool success = false;
+            watch.Restart();
+
+            success = hash.Get(5000, ref result);
+            Console.WriteLine("Find: " + result + " success: " + success + " in: " + watch.ElapsedTicks);
+        }
+
+        static void TestSCHash()
+        {
+            SCHash<int, int> hash = new SCHash<int, int>();
+            var random = new Random();
+
+            Stopwatch watch = new Stopwatch();
+            watch.Restart();
+
+            var find = random.Next(0, 10000);
+            hash.Add(find, find);
+            int toAdd;
+            for (int i = 0; i < 10000; i++)
+            {
+                toAdd = random.Next(0, 10000);
+                hash.Add(toAdd, toAdd);
+            }
+
+            Console.WriteLine("SCHash: " + watch.ElapsedMilliseconds);
+
+            Console.WriteLine("Find: " + 5000 + " in SCHash");
+            int result = 0;
+            bool success = false;
+            watch.Restart();
+
+            success = hash.Get(5000, ref result);
+            Console.WriteLine("Find: " + result + " success: " + success + " in: " + watch.ElapsedTicks);
         }
 
         static void TestBSTree()
@@ -21,11 +79,11 @@ namespace AlgorithmTest
             Stopwatch watch = new Stopwatch();
             watch.Restart();
 
-            var find = new BSTNode(random.Next(0, 100));
+            var find = new BSTNode(random.Next(0, 10000));
             tree = BSTNode.Add(tree, find);
             for (int i = 0; i < 10000; i++)
             {
-                tree = BSTNode.Add(tree, new BSTNode(random.Next(0, 100000)));
+                tree = BSTNode.Add(tree, new BSTNode(random.Next(0, 10000)));
             }
 
             Console.WriteLine("BST: " + watch.ElapsedMilliseconds);
@@ -37,9 +95,9 @@ namespace AlgorithmTest
 
             //tree.MidOrderIterate();
 
+            Console.WriteLine("Find: " + find.Key + " in BST");
             watch.Restart();
 
-            Console.WriteLine("Find: " + find.Key + " in BST");
             var result = tree.Get(find);
             Console.WriteLine("Find: " + result.Key + " in: " + watch.ElapsedTicks);
         }
@@ -52,11 +110,11 @@ namespace AlgorithmTest
             Stopwatch watch = new Stopwatch();
             watch.Restart();
 
-            var find = new RBBSTNode(random.Next(0, 100));
+            var find = new RBBSTNode(random.Next(0, 10000));
             tree = RBBSTNode.Add(tree, find);
             for (int i = 0; i < 10000; i++)
             {
-                tree = RBBSTNode.Add(tree, new RBBSTNode(random.Next(0, 100000)));
+                tree = RBBSTNode.Add(tree, new RBBSTNode(random.Next(0, 10000)));
             }
 
             Console.WriteLine("RBBST: " + watch.ElapsedMilliseconds);
@@ -68,11 +126,257 @@ namespace AlgorithmTest
 
             //tree.MidOrderIterate();
 
+            Console.WriteLine("Find: " + find.Key + " in RBBST");
             watch.Restart();
 
-            Console.WriteLine("Find: " + find.Key + " in RBBST");
             var result = tree.Get(find);
             Console.WriteLine("Find: " + result.Key + " in: " + watch.ElapsedTicks);
+        }
+    }
+
+    public abstract class BaseHash
+    {
+        public virtual int GetHashCode(object p_key)
+        {
+            if (p_key.GetType() == typeof(int))
+            {
+                var hash = Convert.ToInt32(p_key);
+                return hash;
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+        }
+    }
+
+    public class LPHash<Key, Value> : BaseHash where Key : struct
+    {
+        public LPItem<Key, Value>[] tables;
+        private int number;
+        private int size;
+
+        public LPHash()
+        {
+            size = 16;
+            GenerateEmptyArray();
+        }
+
+        public LPHash(int p_size)
+        {
+            size = p_size;
+            GenerateEmptyArray();
+        }
+
+        private void GenerateEmptyArray()
+        {
+            tables = new LPItem<Key, Value>[size];
+            for (int i = 0; i < tables.Length; i++)
+            {
+                tables[i] = new LPItem<Key, Value>();
+            }
+        }
+
+        private void Resize(int p_size)
+        {
+            var temp = new LPHash<Key, Value>(p_size);
+
+            for (int i = 0; i < size; i++)
+            {
+                if (!tables[i].IsEmpty)
+                {
+                    temp.Add(tables[i].key, tables[i].value);
+                }
+            }
+
+            tables = temp.tables;
+            number = temp.number;
+            size = temp.size;
+        }
+
+        public override int GetHashCode(object p_key)
+        {
+            return base.GetHashCode(p_key) * 2 % size;
+        }
+
+        public void Add(Key p_key, Value p_value)
+        {
+            var hash = GetHashCode(p_key);
+            for (int i = hash; ; i = (i + 1) % size)
+            {
+                if (tables[i].IsEmpty)
+                {
+                    tables[i] = new LPItem<Key, Value>(p_key, p_value);
+                    number++;
+
+                    if (number > size / 2)
+                    {
+                        Resize(2 * size);
+                    }
+
+                    return;
+                }
+                else if (tables[i].key.Equals(p_key))
+                {
+                    tables[i].value = p_value;
+                }
+            }
+        }
+
+        public bool Get(Key p_key, ref Value p_value)
+        {
+            var hash = GetHashCode(p_key);
+            for (int i = hash; ; i = (i + 1) % size)
+            {
+                if (tables[i].IsEmpty)
+                {
+                    return false;
+                }
+                else if (tables[i].key.Equals(p_key))
+                {
+                    p_value = tables[i].value;
+                    return true;
+                }
+            }
+        }
+    }
+
+    public class LPItem<Key, Value> where Key : struct
+    {
+        public Key key;
+        public Value value;
+        public bool IsEmpty = true;
+
+        public LPItem()
+        {
+
+        }
+
+        public LPItem(Key p_key, Value p_value)
+        {
+            key = p_key;
+            value = p_value;
+            IsEmpty = false;
+        }
+    }
+
+    public class SCHash<Key, Value> : BaseHash where Key : struct
+    {
+        public SCItem<Key, Value>[] tables;
+        private int size;
+
+        public SCHash()
+        {
+            size = 10000;
+            GenerateEmptyArray();
+        }
+
+        public SCHash(int p_size)
+        {
+            size = p_size;
+            GenerateEmptyArray();
+        }
+
+        private void GenerateEmptyArray()
+        {
+            tables = new SCItem<Key, Value>[size];
+            for (int i = 0; i < tables.Length; i++)
+            {
+                tables[i] = new SCItem<Key, Value>();
+            }
+        }
+
+        public override int GetHashCode(object p_key)
+        {
+            return base.GetHashCode(p_key) % size;
+        }
+
+        public void Add(Key p_key, Value p_value)
+        {
+            tables[GetHashCode(p_key)].Add(p_key, p_value);
+        }
+
+        public bool Get(Key p_key, ref Value p_value)
+        {
+            return tables[GetHashCode(p_key)].Get(p_key, ref p_value);
+        }
+    }
+
+    public class SCItem<Key, Value> where Key : struct
+    {
+        public Key key;
+        public Value value;
+        public bool IsEmpty = true;
+
+        public SCItem<Key, Value> Next;
+
+        public SCItem()
+        {
+
+        }
+
+        public SCItem(Key p_key, Value p_value)
+        {
+            key = p_key;
+            value = p_value;
+            IsEmpty = false;
+        }
+
+        public void Add(Key p_key, Value p_value)
+        {
+            if (IsEmpty)
+            {
+                key = p_key;
+                value = p_value;
+                IsEmpty = false;
+            }
+            else
+            {
+                SCItem<Key, Value> previous = null;
+                SCItem<Key, Value> current = this;
+                do
+                {
+                    if (Equals(p_key, current.key))
+                    {
+                        current.value = p_value;
+                        return;
+                    }
+                    else
+                    {
+                        previous = current;
+                        current = current.Next;
+                    }
+                }
+                while (current != null);
+                previous.Next = new SCItem<Key, Value>(p_key, p_value);
+            }
+        }
+
+        public bool Get(Key p_key, ref Value p_value)
+        {
+            if (IsEmpty)
+            {
+                return false;
+            }
+            else
+            {
+                var current = this;
+                do
+                {
+                    if (Equals(p_key, current.key))
+                    {
+                        p_value = value;
+                        return true;
+                    }
+                    else
+                    {
+                        current = current.Next;
+                    }
+                }
+                while (current != null);
+
+                return false;
+            }
         }
     }
 
@@ -431,50 +735,6 @@ namespace AlgorithmTest
         }
     }
 
-    //public class BST
-    //{
-    //    private BTNode root;
-
-    //    public int Size
-    //    {
-    //        get
-    //        {
-    //            if (root == null)
-    //            {
-    //                return 0;
-    //            }
-    //            else
-    //            {
-    //                return root.Size;
-    //            }
-    //        }
-    //    }
-
-    //    public BTNode Get(BTNode p_node)
-    //    {
-    //        if (root == null)
-    //        {
-    //            return null;
-    //        }
-    //        else
-    //        {
-    //            return root.Get(p_node);
-    //        }
-    //    }
-
-    //    public void Add(BTNode p_node)
-    //    {
-    //        if (root == null)
-    //        {
-    //            root = p_node;
-    //        }
-    //        else
-    //        {
-    //            root.Add(p_node);
-    //        }
-    //    }
-    //}
-
     public class Sort
     {
         public void TestSort()
@@ -488,6 +748,8 @@ namespace AlgorithmTest
 
         void TestSortInternal(Action<List<int>> p_action)
         {
+            Console.WriteLine(p_action.Method.Name);
+
             List<int> testData = new List<int>();
             var random = new Random();
             for (int i = 0; i < 10000; i++)
