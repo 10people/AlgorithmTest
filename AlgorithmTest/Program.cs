@@ -15,6 +15,38 @@ namespace AlgorithmTest
             TestSCHash();
             TestLPHash();
             TestGraph();
+            TestDiGraph();
+            TestMST();
+        }
+
+        static void TestMST()
+        {
+            Graph graph = new DiGraph();
+            var random = new Random();
+
+            Stopwatch watch = new Stopwatch();
+            watch.Restart();
+
+            graph.AddEdge(0, 1);
+            int toAdd;
+            int from;
+            for (int i = 2; i < 10000; i++)
+            {
+                toAdd = i;
+                from = random.Next(0, i);
+                graph.AddEdge(from, toAdd, random.Next(1, 4));
+            }
+
+            Console.WriteLine("Weight DiGraph: " + watch.ElapsedMilliseconds);
+
+            Console.WriteLine("MST in Weight DiGraph");
+            watch.Restart();
+
+            MinimumSpanningTree mst = new MinimumSpanningTree(graph);
+            mst.MST(0);
+            Console.WriteLine("MST in: " + watch.ElapsedTicks);
+            //dfp.OutputOrder();
+            mst.OutputOrder();
         }
 
         static void TestGraph()
@@ -27,12 +59,12 @@ namespace AlgorithmTest
 
             graph.AddEdge(0, 1);
             int toAdd;
-            int toAdd2;
+            int from;
             for (int i = 2; i < 10000; i++)
             {
                 toAdd = i;
-                toAdd2 = random.Next(0, i);
-                graph.AddEdge(toAdd, toAdd2);
+                from = random.Next(0, i);
+                graph.AddEdge(from, toAdd);
             }
 
             Console.WriteLine("Graph: " + watch.ElapsedMilliseconds);
@@ -40,8 +72,8 @@ namespace AlgorithmTest
             Console.WriteLine("DFP in Graph");
             watch.Restart();
 
-            DepthFirstPath dfp = new DepthFirstPath(graph);
-            dfp.DFP(0);
+            DepthFirstSearch dfp = new DepthFirstSearch(graph);
+            dfp.DFS(0);
             Console.WriteLine("DFP in: " + watch.ElapsedTicks);
             //dfp.OutputOrder();
             dfp.OutputPath(5000);
@@ -49,11 +81,66 @@ namespace AlgorithmTest
             Console.WriteLine("BFP in Graph");
             watch.Restart();
 
-            BreadthFirstPath bfp = new BreadthFirstPath(graph);
-            bfp.BFP(0);
+            BreadthFirstSearch bfp = new BreadthFirstSearch(graph);
+            bfp.BFS(0);
             Console.WriteLine("BFP in: " + watch.ElapsedTicks);
             //bfp.OutputOrder();
             bfp.OutputPath(5000);
+        }
+
+        static void TestDiGraph()
+        {
+            Graph graph = new DiGraph();
+            var random = new Random();
+
+            Stopwatch watch = new Stopwatch();
+            watch.Restart();
+
+            graph.AddEdge(0, 1);
+            int toAdd;
+            int from;
+            for (int i = 2; i < 10000; i++)
+            {
+                toAdd = i;
+                from = random.Next(0, i);
+                graph.AddEdge(from, toAdd);
+            }
+
+            Console.WriteLine("DiGraph: " + watch.ElapsedMilliseconds);
+
+            Console.WriteLine("DFP in DiGraph");
+            watch.Restart();
+
+            DepthFirstSearch dfp = new DepthFirstSearch(graph);
+            dfp.DFS(0);
+            Console.WriteLine("DFP in: " + watch.ElapsedTicks);
+            //dfp.OutputOrder();
+            dfp.OutputPath(5000);
+
+            Console.WriteLine("BFP in DiGraph");
+            watch.Restart();
+
+            BreadthFirstSearch bfp = new BreadthFirstSearch(graph);
+            bfp.BFS(0);
+            Console.WriteLine("BFP in: " + watch.ElapsedTicks);
+            //bfp.OutputOrder();
+            bfp.OutputPath(5000);
+
+            Console.WriteLine("Cycle in DiGraph");
+            watch.Restart();
+
+            GraphCycle cycle = new GraphCycle(graph);
+            cycle.CS();
+            Console.WriteLine("CS in: " + watch.ElapsedTicks);
+            cycle.OutputCycle();
+
+            Console.WriteLine("Topo sort in DiGraph");
+            watch.Restart();
+
+            DepthFirstOrder order = new DepthFirstOrder(graph);
+            order.DFO();
+            Console.WriteLine("Topo sort in: " + watch.ElapsedTicks);
+            //order.OutputReversePost();
         }
 
         static void TestLPHash()
@@ -175,7 +262,92 @@ namespace AlgorithmTest
         }
     }
 
-    public class BreadthFirstPath
+    public class DiGraph : Graph
+    {
+        public override void AddEdge(int p_first, int p_second, int p_weight = -1)
+        {
+            if (p_first == p_second)
+            {
+                return;
+            }
+
+            while (size <= p_first || size <= p_second)
+            {
+                Resize();
+            }
+
+            AddAdj(p_first, p_second, p_weight);
+        }
+
+        public void Reverse()
+        {
+            var reverse = new DiGraph();
+
+            for (int i = 0; i < VertexCount; i++)
+            {
+                for (int j = 0; j < AdjArray[i].Count; j++)
+                {
+                    reverse.AddEdge(i, AdjArray[i][j], WeightArray[i][j]);
+                }
+            }
+
+            AdjArray = reverse.AdjArray;
+            WeightArray = reverse.WeightArray;
+        }
+    }
+
+    public class MinimumSpanningTree : BreadthFirstSearch
+    {
+        public MinimumSpanningTree(Graph p_graph) : base(p_graph)
+        {
+
+        }
+
+        public void MST(int p_startVertex)
+        {
+            //assuming graph in connected
+            BFS(p_startVertex);
+        }
+
+        protected override void bfs(Graph p_graph, int p_startVertex)
+        {
+            List<int> processList = new List<int>();
+            processList.Add(p_startVertex);
+            addedToQueue[p_startVertex] = true;
+
+            while (processList.Count > 0)
+            {
+                var current = processList.First();
+                processList.RemoveAt(0);
+
+                connected[current] = true;
+                searchOrder.Add(current);
+
+                for (int i = 0; i < p_graph.AdjArray[current].Count; i++)
+                {
+                    var adj = p_graph.AdjArray[current][i];
+
+                    if (!connected[adj])
+                    {
+                        //change search from to smaller weight
+                        if (graph.GetWeight(SearchFrom[adj], adj) > graph.GetWeight(current, adj))
+                        {
+                            SearchFrom[adj] = current;
+                        }
+
+                        if (!addedToQueue[adj])
+                        {
+                            addedToQueue[adj] = true;
+                            processList.Add(adj);
+                            processList = processList.OrderBy(item => graph.GetWeight(SearchFrom[item], item)).ToList();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public class BreadthFirstSearch
     {
         public bool[] connected;
         public bool[] addedToQueue;
@@ -207,7 +379,7 @@ namespace AlgorithmTest
             }
         }
 
-        public BreadthFirstPath(Graph p_graph)
+        public BreadthFirstSearch(Graph p_graph)
         {
             connected = new bool[p_graph.VertexCount];
             addedToQueue = new bool[p_graph.VertexCount];
@@ -215,13 +387,13 @@ namespace AlgorithmTest
             graph = p_graph;
         }
 
-        public void BFP(int p_startVertex)
+        public void BFS(int p_startVertex)
         {
             SearchFrom[p_startVertex] = -1;
-            process(graph, p_startVertex);
+            bfs(graph, p_startVertex);
         }
 
-        private void process(Graph p_graph, int p_startVertex)
+        protected virtual void bfs(Graph p_graph, int p_startVertex)
         {
             Queue<int> processQueue = new Queue<int>();
             processQueue.Enqueue(p_startVertex);
@@ -229,6 +401,7 @@ namespace AlgorithmTest
 
             while (processQueue.Count > 0)
             {
+                //dequeue the lowest weight (SearchFrom[item]--item) to implement minimum spanning tree
                 var dequeue = processQueue.Dequeue();
 
                 connected[dequeue] = true;
@@ -255,8 +428,122 @@ namespace AlgorithmTest
         }
     }
 
-    public class DepthFirstPath : DepthFirstSearch
+    public class GraphCycle : DepthFirstSearch
     {
+        public bool[] OnProcess;
+
+        public Stack<int> Cycle = new Stack<int>();
+
+        public GraphCycle(Graph p_graph) : base(p_graph)
+        {
+            OnProcess = new bool[graph.VertexCount];
+        }
+
+        public void CS()
+        {
+            for (int i = 0; i < graph.VertexCount; i++)
+            {
+                if (!connected[i])
+                {
+                    dfs(graph, i);
+                }
+            }
+        }
+
+        protected override void dfs(Graph p_graph, int p_startVertex)
+        {
+            connected[p_startVertex] = true;
+            searchOrder.Add(p_startVertex);
+            OnProcess[p_startVertex] = true;
+
+            for (int i = 0; i < p_graph.AdjArray[p_startVertex].Count; i++)
+            {
+                if (Cycle.Count > 0)
+                {
+                    return;
+                }
+
+                if (!connected[p_graph.AdjArray[p_startVertex][i]])
+                {
+                    SearchFrom[p_graph.AdjArray[p_startVertex][i]] = p_startVertex;
+                    dfs(p_graph, p_graph.AdjArray[p_startVertex][i]);
+                }
+                else if (OnProcess[p_graph.AdjArray[p_startVertex][i]])
+                {
+                    for (int j = p_startVertex; j != p_graph.AdjArray[p_startVertex][i]; j = SearchFrom[j])
+                    {
+                        Cycle.Push(j);
+                    }
+
+                    Cycle.Push(p_graph.AdjArray[p_startVertex][i]);
+                    Cycle.Push(p_startVertex);
+                }
+            }
+
+            OnProcess[p_startVertex] = false;
+        }
+
+        public void OutputCycle()
+        {
+            if (Cycle.Count > 0)
+            {
+                Console.WriteLine(Cycle.Select(item => item.ToString()).Aggregate((i, j) => i + "," + j));
+            }
+        }
+    }
+
+    public class DepthFirstOrder : DepthFirstSearch
+    {
+        public List<int> PreOrder = new List<int>();
+        public List<int> PostOrder = new List<int>();
+        public Stack<int> ReversePostOrder = new Stack<int>();
+
+        public DepthFirstOrder(Graph p_graph) : base(p_graph)
+        {
+
+        }
+
+        public void DFO()
+        {
+            for (int i = 0; i < graph.VertexCount; i++)
+            {
+                if (!connected[i])
+                {
+                    dfs(graph, i);
+                }
+            }
+        }
+
+        protected override void dfs(Graph p_graph, int p_startVertex)
+        {
+            connected[p_startVertex] = true;
+            PreOrder.Add(p_startVertex);
+
+            for (int i = 0; i < p_graph.AdjArray[p_startVertex].Count; i++)
+            {
+                if (!connected[p_graph.AdjArray[p_startVertex][i]])
+                {
+                    SearchFrom[p_graph.AdjArray[p_startVertex][i]] = p_startVertex;
+                    dfs(p_graph, p_graph.AdjArray[p_startVertex][i]);
+                }
+            }
+
+            PostOrder.Add(p_startVertex);
+            ReversePostOrder.Push(p_startVertex);
+        }
+
+        public void OutputReversePost()
+        {
+            Console.WriteLine(ReversePostOrder.Select(item => item.ToString()).Aggregate((i, j) => i + "," + j));
+        }
+    }
+
+    public class DepthFirstSearch
+    {
+        public bool[] connected;
+        public List<int> searchOrder = new List<int>();
+        public Graph graph;
+
         public int[] SearchFrom;
 
         public bool IsConnected(int p_targetVertex)
@@ -282,18 +569,20 @@ namespace AlgorithmTest
             }
         }
 
-        public DepthFirstPath(Graph p_graph) : base(p_graph)
+        public DepthFirstSearch(Graph p_graph)
         {
+            connected = new bool[p_graph.VertexCount];
+            graph = p_graph;
             SearchFrom = new int[p_graph.VertexCount];
         }
 
-        public void DFP(int p_startVertex)
+        public void DFS(int p_startVertex)
         {
             SearchFrom[p_startVertex] = -1;
-            DFS(p_startVertex);
+            dfs(graph, p_startVertex);
         }
 
-        protected override void process(Graph p_graph, int p_startVertex)
+        protected virtual void dfs(Graph p_graph, int p_startVertex)
         {
             connected[p_startVertex] = true;
             searchOrder.Add(p_startVertex);
@@ -303,42 +592,8 @@ namespace AlgorithmTest
                 if (!connected[p_graph.AdjArray[p_startVertex][i]])
                 {
                     SearchFrom[p_graph.AdjArray[p_startVertex][i]] = p_startVertex;
-                    process(p_graph, p_graph.AdjArray[p_startVertex][i]);
+                    dfs(p_graph, p_graph.AdjArray[p_startVertex][i]);
                 }
-            }
-        }
-    }
-
-    public class DepthFirstSearch
-    {
-        public bool[] connected;
-        public List<int> searchOrder = new List<int>();
-        public Graph graph;
-
-        public DepthFirstSearch(Graph p_graph)
-        {
-            connected = new bool[p_graph.VertexCount];
-            graph = p_graph;
-        }
-
-        public void DFS(int p_startVertex)
-        {
-            process(graph, p_startVertex);
-        }
-
-        protected virtual void process(Graph p_graph, int p_startVertex)
-        {
-            if (connected[p_startVertex])
-            {
-                return;
-            }
-
-            connected[p_startVertex] = true;
-            searchOrder.Add(p_startVertex);
-
-            for (int i = 0; i < p_graph.AdjArray[p_startVertex].Count; i++)
-            {
-                process(p_graph, p_graph.AdjArray[p_startVertex][i]);
             }
         }
 
@@ -360,7 +615,9 @@ namespace AlgorithmTest
         public int EdgeCount;
         public List<int>[] AdjArray;
 
-        private int size;
+        public List<int>[] WeightArray;
+
+        protected int size;
 
         public Graph()
         {
@@ -377,18 +634,44 @@ namespace AlgorithmTest
         private void AllocateArray()
         {
             AdjArray = new List<int>[size];
+            WeightArray = new List<int>[size];
         }
 
-        private void Resize()
+        protected void Resize()
         {
             size *= 2;
-            var temp = new List<int>[size];
-            AdjArray.CopyTo(temp, 0);
+            var tempAdj = new List<int>[size];
+            AdjArray.CopyTo(tempAdj, 0);
 
-            AdjArray = temp;
+            AdjArray = tempAdj;
+
+            var tempWeight = new List<int>[size];
+            WeightArray.CopyTo(tempWeight, 0);
+
+            WeightArray = tempWeight;
         }
 
-        public void AddEdge(int p_first, int p_second)
+        /// <summary>
+        /// Bad performance
+        /// </summary>
+        /// <param name="p_first"></param>
+        /// <param name="p_second"></param>
+        /// <returns></returns>
+        public int GetWeight(int p_first, int p_second)
+        {
+            if (p_first >= 0 && p_first < AdjArray.Length && AdjArray[p_first].Contains(p_second))
+            {
+                int index = AdjArray[p_first].IndexOf(p_second);
+
+                return WeightArray[p_first][index];
+            }
+            else
+            {
+                return -1;
+            }
+        }
+
+        public virtual void AddEdge(int p_first, int p_second, int p_weight = -1)
         {
             if (p_first == p_second)
             {
@@ -400,11 +683,11 @@ namespace AlgorithmTest
                 Resize();
             }
 
-            AddAdj(p_first, p_second);
-            AddAdj(p_second, p_first);
+            AddAdj(p_first, p_second, p_weight);
+            AddAdj(p_second, p_first, p_weight);
         }
 
-        private void AddAdj(int p_first, int p_second)
+        protected void AddAdj(int p_first, int p_second, int p_weight = -1)
         {
             if (p_first >= AdjArray.Length)
             {
@@ -414,12 +697,21 @@ namespace AlgorithmTest
             if (AdjArray[p_first] == null)
             {
                 AdjArray[p_first] = new List<int>();
+                WeightArray[p_first] = new List<int>();
+                VertexCount++;
+            }
+
+            if (AdjArray[p_second] == null)
+            {
+                AdjArray[p_second] = new List<int>();
+                WeightArray[p_second] = new List<int>();
                 VertexCount++;
             }
 
             if (!AdjArray[p_first].Contains(p_second))
             {
                 AdjArray[p_first].Add(p_second);
+                WeightArray[p_first].Add(p_weight);
                 EdgeCount++;
             }
         }
@@ -1037,7 +1329,7 @@ namespace AlgorithmTest
             TestSortInternal(ShellSort);
         }
 
-        void TestSortInternal(Action<List<int>> p_action)
+        public void TestSortInternal(Action<List<int>> p_action)
         {
             Console.WriteLine(p_action.Method.Name);
 
@@ -1059,7 +1351,7 @@ namespace AlgorithmTest
             //Console.WriteLine(testData.Select(item => item.ToString()).Aggregate((i, j) => i + "," + j));
         }
 
-        void ShellSort(List<int> p_data)
+        public void ShellSort(List<int> p_data)
         {
             int step = 1;
             while (step * 3 < p_data.Count)
@@ -1090,7 +1382,7 @@ namespace AlgorithmTest
             }
         }
 
-        void QuickSort(List<int> p_data)
+        public void QuickSort(List<int> p_data)
         {
             QuickSort(p_data, 0, p_data.Count - 1);
         }
@@ -1145,7 +1437,7 @@ namespace AlgorithmTest
             return low;
         }
 
-        void MergeSort(List<int> p_data)
+        public void MergeSort(List<int> p_data)
         {
             List<int> copiedData = new List<int>();
             for (int i = 0; i < p_data.Count; i++)
@@ -1192,7 +1484,7 @@ namespace AlgorithmTest
             }
         }
 
-        void InsertSort(List<int> p_data)
+        public void InsertSort(List<int> p_data)
         {
             for (int sorted = 0; sorted < p_data.Count - 1; sorted++)
             {
@@ -1212,7 +1504,7 @@ namespace AlgorithmTest
             }
         }
 
-        void SelectSort(List<int> p_data)
+        public void SelectSort(List<int> p_data)
         {
             for (int sorted = -1; sorted < p_data.Count - 1; sorted++)
             {
