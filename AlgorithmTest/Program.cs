@@ -46,7 +46,7 @@ namespace AlgorithmTest
             mst.MST(0);
             Console.WriteLine("MST in: " + watch.ElapsedTicks);
             //dfp.OutputOrder();
-            mst.OutputOrder();
+            mst.OutputTree();
         }
 
         static void TestGraph()
@@ -287,20 +287,25 @@ namespace AlgorithmTest
             {
                 for (int j = 0; j < AdjArray[i].Count; j++)
                 {
-                    reverse.AddEdge(i, AdjArray[i][j], WeightArray[i][j]);
+                    reverse.AddEdge(i, AdjArray[i][j].VertexTo, AdjArray[i][j].Weight);
                 }
             }
 
             AdjArray = reverse.AdjArray;
-            WeightArray = reverse.WeightArray;
         }
     }
 
     public class MinimumSpanningTree : BreadthFirstSearch
     {
+        public int[] DisToSearchFrom;
+
         public MinimumSpanningTree(Graph p_graph) : base(p_graph)
         {
-
+            DisToSearchFrom = new int[p_graph.VertexCount];
+            for (int i = 0; i < DisToSearchFrom.Length; i++)
+            {
+                DisToSearchFrom[i] = int.MaxValue;
+            }
         }
 
         public void MST(int p_startVertex)
@@ -311,9 +316,12 @@ namespace AlgorithmTest
 
         protected override void bfs(Graph p_graph, int p_startVertex)
         {
+            //Add first vertex to process list
             List<int> processList = new List<int>();
             processList.Add(p_startVertex);
             addedToQueue[p_startVertex] = true;
+            SearchFrom[p_startVertex] = -1;
+            DisToSearchFrom[p_startVertex] = 0;
 
             while (processList.Count > 0)
             {
@@ -325,25 +333,32 @@ namespace AlgorithmTest
 
                 for (int i = 0; i < p_graph.AdjArray[current].Count; i++)
                 {
-                    var adj = p_graph.AdjArray[current][i];
+                    var to = p_graph.AdjArray[current][i].VertexTo;
+                    var toWeight = p_graph.AdjArray[current][i].Weight;
 
-                    if (!connected[adj])
+                    if (!connected[to])
                     {
                         //change search from to smaller weight
-                        if (graph.GetWeight(SearchFrom[adj], adj) > graph.GetWeight(current, adj))
+                        if (DisToSearchFrom[to] > toWeight)
                         {
-                            SearchFrom[adj] = current;
+                            SearchFrom[to] = current;
+                            DisToSearchFrom[to] = toWeight;
                         }
 
-                        if (!addedToQueue[adj])
+                        if (!addedToQueue[to])
                         {
-                            addedToQueue[adj] = true;
-                            processList.Add(adj);
+                            addedToQueue[to] = true;
+                            processList.Add(to);
                             processList = processList.OrderBy(item => graph.GetWeight(SearchFrom[item], item)).ToList();
                         }
                     }
                 }
             }
+        }
+
+        public void OutputTree()
+        {
+            Console.WriteLine(searchOrder.Select(item => SearchFrom[item] + "-" + item + ":" + graph.GetWeight(SearchFrom[item], item)).Aggregate((i, j) => i + "," + j));
         }
     }
 
@@ -409,11 +424,11 @@ namespace AlgorithmTest
 
                 for (int i = 0; i < p_graph.AdjArray[dequeue].Count; i++)
                 {
-                    if (!addedToQueue[p_graph.AdjArray[dequeue][i]])
+                    if (!addedToQueue[p_graph.AdjArray[dequeue][i].VertexTo])
                     {
-                        SearchFrom[p_graph.AdjArray[dequeue][i]] = dequeue;
-                        addedToQueue[p_graph.AdjArray[dequeue][i]] = true;
-                        processQueue.Enqueue(p_graph.AdjArray[dequeue][i]);
+                        SearchFrom[p_graph.AdjArray[dequeue][i].VertexTo] = dequeue;
+                        addedToQueue[p_graph.AdjArray[dequeue][i].VertexTo] = true;
+                        processQueue.Enqueue(p_graph.AdjArray[dequeue][i].VertexTo);
                     }
                 }
             }
@@ -463,19 +478,19 @@ namespace AlgorithmTest
                     return;
                 }
 
-                if (!connected[p_graph.AdjArray[p_startVertex][i]])
+                if (!connected[p_graph.AdjArray[p_startVertex][i].VertexTo])
                 {
-                    SearchFrom[p_graph.AdjArray[p_startVertex][i]] = p_startVertex;
-                    dfs(p_graph, p_graph.AdjArray[p_startVertex][i]);
+                    SearchFrom[p_graph.AdjArray[p_startVertex][i].VertexTo] = p_startVertex;
+                    dfs(p_graph, p_graph.AdjArray[p_startVertex][i].VertexTo);
                 }
-                else if (OnProcess[p_graph.AdjArray[p_startVertex][i]])
+                else if (OnProcess[p_graph.AdjArray[p_startVertex][i].VertexTo])
                 {
-                    for (int j = p_startVertex; j != p_graph.AdjArray[p_startVertex][i]; j = SearchFrom[j])
+                    for (int j = p_startVertex; j != p_graph.AdjArray[p_startVertex][i].VertexTo; j = SearchFrom[j])
                     {
                         Cycle.Push(j);
                     }
 
-                    Cycle.Push(p_graph.AdjArray[p_startVertex][i]);
+                    Cycle.Push(p_graph.AdjArray[p_startVertex][i].VertexTo);
                     Cycle.Push(p_startVertex);
                 }
             }
@@ -521,10 +536,10 @@ namespace AlgorithmTest
 
             for (int i = 0; i < p_graph.AdjArray[p_startVertex].Count; i++)
             {
-                if (!connected[p_graph.AdjArray[p_startVertex][i]])
+                if (!connected[p_graph.AdjArray[p_startVertex][i].VertexTo])
                 {
-                    SearchFrom[p_graph.AdjArray[p_startVertex][i]] = p_startVertex;
-                    dfs(p_graph, p_graph.AdjArray[p_startVertex][i]);
+                    SearchFrom[p_graph.AdjArray[p_startVertex][i].VertexTo] = p_startVertex;
+                    dfs(p_graph, p_graph.AdjArray[p_startVertex][i].VertexTo);
                 }
             }
 
@@ -589,10 +604,10 @@ namespace AlgorithmTest
 
             for (int i = 0; i < p_graph.AdjArray[p_startVertex].Count; i++)
             {
-                if (!connected[p_graph.AdjArray[p_startVertex][i]])
+                if (!connected[p_graph.AdjArray[p_startVertex][i].VertexTo])
                 {
-                    SearchFrom[p_graph.AdjArray[p_startVertex][i]] = p_startVertex;
-                    dfs(p_graph, p_graph.AdjArray[p_startVertex][i]);
+                    SearchFrom[p_graph.AdjArray[p_startVertex][i].VertexTo] = p_startVertex;
+                    dfs(p_graph, p_graph.AdjArray[p_startVertex][i].VertexTo);
                 }
             }
         }
@@ -611,11 +626,15 @@ namespace AlgorithmTest
     /// </summary>
     public class Graph
     {
+        public class AdjTo
+        {
+            public int VertexTo;
+            public int Weight;
+        }
+
         public int VertexCount;
         public int EdgeCount;
-        public List<int>[] AdjArray;
-
-        public List<int>[] WeightArray;
+        public List<AdjTo>[] AdjArray;
 
         protected int size;
 
@@ -633,22 +652,16 @@ namespace AlgorithmTest
 
         private void AllocateArray()
         {
-            AdjArray = new List<int>[size];
-            WeightArray = new List<int>[size];
+            AdjArray = new List<AdjTo>[size];
         }
 
         protected void Resize()
         {
             size *= 2;
-            var tempAdj = new List<int>[size];
+            var tempAdj = new List<AdjTo>[size];
             AdjArray.CopyTo(tempAdj, 0);
 
             AdjArray = tempAdj;
-
-            var tempWeight = new List<int>[size];
-            WeightArray.CopyTo(tempWeight, 0);
-
-            WeightArray = tempWeight;
         }
 
         /// <summary>
@@ -659,11 +672,18 @@ namespace AlgorithmTest
         /// <returns></returns>
         public int GetWeight(int p_first, int p_second)
         {
-            if (p_first >= 0 && p_first < AdjArray.Length && AdjArray[p_first].Contains(p_second))
+            if (p_first >= 0 && p_first < AdjArray.Length)
             {
-                int index = AdjArray[p_first].IndexOf(p_second);
+                var to = AdjArray[p_first].Where(item => item.VertexTo == p_second).FirstOrDefault();
 
-                return WeightArray[p_first][index];
+                if (to != null)
+                {
+                    return to.Weight;
+                }
+                else
+                {
+                    return -1;
+                }
             }
             else
             {
@@ -696,23 +716,25 @@ namespace AlgorithmTest
 
             if (AdjArray[p_first] == null)
             {
-                AdjArray[p_first] = new List<int>();
-                WeightArray[p_first] = new List<int>();
+                AdjArray[p_first] = new List<AdjTo>();
                 VertexCount++;
             }
 
             if (AdjArray[p_second] == null)
             {
-                AdjArray[p_second] = new List<int>();
-                WeightArray[p_second] = new List<int>();
+                AdjArray[p_second] = new List<AdjTo>();
                 VertexCount++;
             }
 
-            if (!AdjArray[p_first].Contains(p_second))
+            var toAdd = AdjArray[p_first].Where(item => item.VertexTo == p_second).FirstOrDefault();
+            if (toAdd == null)
             {
-                AdjArray[p_first].Add(p_second);
-                WeightArray[p_first].Add(p_weight);
+                AdjArray[p_first].Add(new AdjTo() { VertexTo = p_second, Weight = p_weight });
                 EdgeCount++;
+            }
+            else
+            {
+                toAdd.Weight = p_weight;
             }
         }
     }
