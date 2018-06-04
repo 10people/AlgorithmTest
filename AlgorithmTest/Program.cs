@@ -16,10 +16,10 @@ namespace AlgorithmTest
             TestLPHash();
             TestGraph();
             TestDiGraph();
-            TestMST();
+            TestAdvanced();
         }
 
-        static void TestMST()
+        static void TestAdvanced()
         {
             Graph graph = new DiGraph();
             var random = new Random();
@@ -27,10 +27,10 @@ namespace AlgorithmTest
             Stopwatch watch = new Stopwatch();
             watch.Restart();
 
-            graph.AddEdge(0, 1);
+            graph.AddEdge(0, 1, random.Next(1, 4));
             int toAdd;
             int from;
-            for (int i = 2; i < 10000; i++)
+            for (int i = 2; i < 1000; i++)
             {
                 toAdd = i;
                 from = random.Next(0, i);
@@ -43,10 +43,24 @@ namespace AlgorithmTest
             watch.Restart();
 
             MinimumSpanningTree mst = new MinimumSpanningTree(graph);
-            mst.MST(0);
+            mst.Execute(0);
             Console.WriteLine("MST in: " + watch.ElapsedTicks);
-            //dfp.OutputOrder();
             mst.OutputTree();
+
+            Console.WriteLine("SP in Weight DiGraph");
+            watch.Restart();
+
+            ShortestPath sp = new ShortestPath(graph);
+            sp.Execute(0);
+            Console.WriteLine("SP in: " + watch.ElapsedTicks);
+            sp.OutputPath();
+
+            Console.WriteLine("CP in Weight DiGraph");
+            watch.Restart();
+
+            CriticalPath cp = new CriticalPath(graph);
+            Console.WriteLine("CP in: " + watch.ElapsedTicks);
+            cp.Output();
         }
 
         static void TestGraph()
@@ -82,7 +96,7 @@ namespace AlgorithmTest
             watch.Restart();
 
             BreadthFirstSearch bfp = new BreadthFirstSearch(graph);
-            bfp.BFS(0);
+            bfp.Execute(0);
             Console.WriteLine("BFP in: " + watch.ElapsedTicks);
             //bfp.OutputOrder();
             bfp.OutputPath(5000);
@@ -121,7 +135,7 @@ namespace AlgorithmTest
             watch.Restart();
 
             BreadthFirstSearch bfp = new BreadthFirstSearch(graph);
-            bfp.BFS(0);
+            bfp.Execute(0);
             Console.WriteLine("BFP in: " + watch.ElapsedTicks);
             //bfp.OutputOrder();
             bfp.OutputPath(5000);
@@ -295,6 +309,110 @@ namespace AlgorithmTest
         }
     }
 
+    public class CriticalPath
+    {
+        public DepthFirstOrder Dfo;
+        public int[] DisToStart;
+
+        private Stack<int> criticalPath = new Stack<int>();
+        private int criticalPathDis = int.MaxValue;
+
+        public CriticalPath(Graph p_graph)
+        {
+            DisToStart = new int[p_graph.VertexCount];
+            for (int i = 0; i < DisToStart.Length; i++)
+            {
+                DisToStart[i] = int.MaxValue;
+            }
+
+            Dfo = new DepthFirstOrder(p_graph);
+            Dfo.DFO();
+
+            DisToStart[0] = 0;
+            for (int i = 1; i < Dfo.ReversePostOrder.Count; i++)
+            {
+                int from = Dfo.SearchFrom[i];
+                DisToStart[i] = DisToStart[from] + p_graph.GetWeight(from, i);
+            }
+
+            criticalPathDis = DisToStart.Max();
+            int maxIndex = DisToStart.ToList().IndexOf(criticalPathDis);
+
+            do
+            {
+                criticalPath.Push(maxIndex);
+                maxIndex = Dfo.SearchFrom[maxIndex];
+            } while (maxIndex >= 0);
+        }
+
+        public void Output()
+        {
+            Console.WriteLine("Critical path dis: " + criticalPathDis);
+            Console.WriteLine("Critical path: " + criticalPath.Select(item => item + ":" + DisToStart[item]).Aggregate((i, j) => i + "," + j));
+        }
+    }
+
+    public class ShortestPath : BreadthFirstSearch
+    {
+        public int[] DisToStart;
+
+        public ShortestPath(Graph p_graph) : base(p_graph)
+        {
+            DisToStart = new int[p_graph.VertexCount];
+            for (int i = 0; i < DisToStart.Length; i++)
+            {
+                DisToStart[i] = int.MaxValue;
+            }
+        }
+
+        protected override void bfs(Graph p_graph, int p_startVertex)
+        {
+            //Add first vertex to process list
+            List<int> processList = new List<int>();
+            processList.Add(p_startVertex);
+            addedToQueue[p_startVertex] = true;
+            SearchFrom[p_startVertex] = -1;
+            DisToStart[p_startVertex] = 0;
+
+            while (processList.Count > 0)
+            {
+                var current = processList.First();
+                processList.RemoveAt(0);
+
+                connected[current] = true;
+                searchOrder.Add(current);
+
+                for (int i = 0; i < p_graph.AdjArray[current].Count; i++)
+                {
+                    var to = p_graph.AdjArray[current][i].VertexTo;
+                    var toWeight = p_graph.AdjArray[current][i].Weight;
+
+                    if (!connected[to])
+                    {
+                        //change search from to smaller weight
+                        if (DisToStart[to] > toWeight + DisToStart[current])
+                        {
+                            SearchFrom[to] = current;
+                            DisToStart[to] = toWeight + DisToStart[current];
+                        }
+
+                        if (!addedToQueue[to])
+                        {
+                            addedToQueue[to] = true;
+                            processList.Add(to);
+                            processList = processList.OrderBy(item => graph.GetWeight(SearchFrom[item], item) + DisToStart[SearchFrom[item]]).ToList();
+                        }
+                    }
+                }
+            }
+        }
+
+        public void OutputPath()
+        {
+            Console.WriteLine(searchOrder.Select(item => SearchFrom[item] + "-" + item + ":" + DisToStart[item] + "|" + graph.GetWeight(SearchFrom[item], item)).Aggregate((i, j) => i + "," + j));
+        }
+    }
+
     public class MinimumSpanningTree : BreadthFirstSearch
     {
         public int[] DisToSearchFrom;
@@ -306,12 +424,6 @@ namespace AlgorithmTest
             {
                 DisToSearchFrom[i] = int.MaxValue;
             }
-        }
-
-        public void MST(int p_startVertex)
-        {
-            //assuming graph in connected
-            BFS(p_startVertex);
         }
 
         protected override void bfs(Graph p_graph, int p_startVertex)
@@ -402,7 +514,7 @@ namespace AlgorithmTest
             graph = p_graph;
         }
 
-        public void BFS(int p_startVertex)
+        public void Execute(int p_startVertex)
         {
             SearchFrom[p_startVertex] = -1;
             bfs(graph, p_startVertex);
@@ -416,7 +528,6 @@ namespace AlgorithmTest
 
             while (processQueue.Count > 0)
             {
-                //dequeue the lowest weight (SearchFrom[item]--item) to implement minimum spanning tree
                 var dequeue = processQueue.Dequeue();
 
                 connected[dequeue] = true;
@@ -524,6 +635,7 @@ namespace AlgorithmTest
             {
                 if (!connected[i])
                 {
+                    SearchFrom[i] = -1;
                     dfs(graph, i);
                 }
             }
