@@ -867,6 +867,11 @@ namespace AlgorithmTest
         }
     }
 
+    /// <summary>
+    /// Linear probe
+    /// </summary>
+    /// <typeparam name="Key"></typeparam>
+    /// <typeparam name="Value"></typeparam>
     public class LPHash<Key, Value> : BaseHash where Key : struct
     {
         public LPItem<Key, Value>[] tables;
@@ -977,6 +982,11 @@ namespace AlgorithmTest
         }
     }
 
+    /// <summary>
+    /// Seperate chain
+    /// </summary>
+    /// <typeparam name="Key"></typeparam>
+    /// <typeparam name="Value"></typeparam>
     public class SCHash<Key, Value> : BaseHash where Key : struct
     {
         public SCItem<Key, Value>[] tables;
@@ -1485,6 +1495,10 @@ namespace AlgorithmTest
             //Console.WriteLine(testData.Select(item => item.ToString()).Aggregate((i, j) => i + "," + j));
         }
 
+        /// <summary>
+        /// Make all elements ordered in scale of step, then change step
+        /// </summary>
+        /// <param name="p_data"></param>
         public void ShellSort(List<int> p_data)
         {
             int step = 1;
